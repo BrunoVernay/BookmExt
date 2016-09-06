@@ -40,6 +40,9 @@ function dumpNode(bookmarkNode) {
   return li;
 }
 
+chrome.tabs.create({ url:chrome.extension.getURL('tree.html')  } );
+
 document.addEventListener('DOMContentLoaded', function () {
   dumpBookmarks();
 });
+
