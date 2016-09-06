@@ -3,17 +3,18 @@
 function dumpBookmarks() {
   var bookmarkTreeNodes = chrome.bookmarks.getTree(
     function(bookmarkTreeNodes) {
-      $('#tree').append(dumpTreeNodes(bookmarkTreeNodes).ul, 0);
+      $('#tree').empty();
+      $('#tree').append(dumpTreeNodes(bookmarkTreeNodes, 0, getOptions()).ul);
     });
 }
 
-function dumpTreeNodes(bookmarkNodes, nbLinksCmul) {
+function dumpTreeNodes(bookmarkNodes, nbLinksCmul, options) {
   var list = $('<ul>');
   var nbLinks = 0;
   for (var i = 0; i < bookmarkNodes.length; i++) {
     if (bookmarkNodes[i].url)  nbLinks++;
     else {
-        var elem = dumpNode(bookmarkNodes[i]);
+        var elem = dumpNode(bookmarkNodes[i], options);
         nbLinksCmul = nbLinksCmul + elem.nbLinksCmul;
         list.append(elem.li);
     }
@@ -21,7 +22,7 @@ function dumpTreeNodes(bookmarkNodes, nbLinksCmul) {
   return {"ul":list, "nbLinks":nbLinks, "nbLinksCmul":nbLinksCmul};
 }
 
-function dumpNode(bookmarkNode) {
+function dumpNode(bookmarkNode, options) {
   var nbChildren = 0;
   var li;
   var obj;
@@ -31,7 +32,7 @@ function dumpNode(bookmarkNode) {
       nbChildren = bookmarkNode.children.length;
   }
   if (nbChildren > 0) {
-      obj = dumpTreeNodes(bookmarkNode.children, nbLinksCmul);
+      obj = dumpTreeNodes(bookmarkNode.children, nbLinksCmul, options);
       nbLinks = obj.nbLinks;
       nbLinksCmul = obj.nbLinksCmul + nbLinks; 
   }
@@ -40,8 +41,11 @@ function dumpNode(bookmarkNode) {
     if (bookmarkNode.url) {
     } else {
 	    span.text(bookmarkNode.title + ": "+ nbLinks +" ; "+ nbLinksCmul );
-        span.css("font-size", (0.3+Math.log(nbLinksCmul)/2)+"em");
-        span.css("font-weight", (900*Math.log(nbLinksCmul)/Math.log(330))+"");
+        var scale = Math.log(nbLinksCmul)/Math.log(400);
+        if (!options.flat) {
+            span.css({ "font-weight": 100*Math.floor(10*scale),
+                       "font-size": (1+scale*1.2)+"em" });
+        };
         li = $('<li>').append(span);
     }
   } else {
@@ -54,7 +58,17 @@ function dumpNode(bookmarkNode) {
   return {"li":li, "nbLinksCmul":nbLinksCmul};
 }
 
-document.addEventListener('DOMContentLoaded', function () {
+function getOptions() {
+    var options = {"flat": $('#flat').is(':checked')};
+    return options;
+}
+
+function ready() {
+  $("#flat").change(function() { dumpBookmarks()});
   dumpBookmarks();
+}
+
+document.addEventListener('DOMContentLoaded', function () {
+    ready();
 });
 
