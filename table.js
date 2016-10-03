@@ -26,7 +26,6 @@ function dumpTreeNodes(bookmarkNodes, tags, options) {
         tr.append($('<td>').text(new Date(bookmarkNodes[i].dateAdded).toISOString().split('.')[0].replace('T',' ')));
         tr.append($('<td>').text(tags));
         tr.append($('<td>').text(bookmarkNodes[i].url));
-        console.log("book: " + bookmarkNodes[i].title);
         $('#table').append(tr);
     } 
     else {
@@ -43,7 +42,9 @@ function getOptions() {
 }
 
 document.addEventListener('DOMContentLoaded', function () {
-  $("#flat").change(function() { dumpBookmarks()});
+  $("#view_button").click(function() {
+    chrome.tabs.update( null, {"url": chrome.extension.getURL("tree.html")});
+  });
   dumpBookmarks();
 });
 

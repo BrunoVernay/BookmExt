@@ -107,6 +107,9 @@ function getOptions() {
 
 document.addEventListener('DOMContentLoaded', function () {
   entryPoint();
+  $("#view_button").click(function() {
+    chrome.tabs.update( null, {"url": chrome.extension.getURL("table.html")});
+  });
   $("#flat").change(function() { dumpBookmarks()});
   dumpBookmarks();
 });
