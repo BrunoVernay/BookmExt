@@ -1,0 +1,6 @@
+
+.collapse , .collapse  td, .collapse  th {
+    border-collapse: collapse;
+    border: 1px solid black;
+}
+

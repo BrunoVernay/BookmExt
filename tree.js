@@ -1,7 +1,49 @@
+//
+// Traverse the bookmark tree and fill my structures
+
+// 
+function getBookm(bookmarkNodes) {
+  var mb ;
+
+  for (var i = 0; i < bookmarkNodes.length; i++) {
+      if (bookmarkNodes[i].url) {
+          nbLinks++;
+          // TODO add the link to the list
+      } else {
+             var elem = 0;//dumpNode(bookmarkNodes[i]);
+//             nbLinksCmul = nbLinksCmul + elem.nbLinksCmul;
+  //           list.append(elem.li);
+      }
+  }
+//    return {"ul":list, "nbLinks":nbLinks, "nbLinksCmul":nbLinksCmul};
+
+}
+
+// All work is done in this call back
+function workOnBookm(bookmarkNodes) {
+  var myBookm = getBookm(bookmarkNodes); 
+
+  console.log("Me: "+ myBookm);
+}
+
+// Entry point
+function entryPoint() {
+  var me = this;
+  chrome.bookmarks.getTree(workOnBookm);
+}
+
+
+//////////////////////////////////////////////////////////
+
 
 // Traverse the bookmark tree, and print the folder and nodes.
 function dumpBookmarks() {
-  var bookmarkTreeNodes = chrome.bookmarks.getTree(
+    // Could not ffind how to search for ALL bookmarks and folders
+    var btn = chrome.bookmarks.search( {"query":"t"}, function (bookmarkTreeNodes) {
+        console.log("Nb. bookmarks = " + bookmarkTreeNodes.length);
+            } );
+
+  chrome.bookmarks.getTree(
     function(bookmarkTreeNodes) {
       $('#tree').empty();
       $('#tree').append(dumpTreeNodes(bookmarkTreeNodes, 0, getOptions()).ul);
@@ -63,12 +105,9 @@ function getOptions() {
     return options;
 }
 
-function ready() {
+document.addEventListener('DOMContentLoaded', function () {
+  entryPoint();
   $("#flat").change(function() { dumpBookmarks()});
   dumpBookmarks();
-}
-
-document.addEventListener('DOMContentLoaded', function () {
-    ready();
 });
 
