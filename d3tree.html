@@ -1,19 +1,21 @@
 <html>
  <head>
   <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.1.0/jquery.min.js"></script>
-  <script src="tree.js"></script>
-    <!-- script type="text/javascript"> </script -->
+  <script src="d3tree.js"></script>
+  <script src="lib/d3.js"></script>
+  <script src="lib/underscore-min.js"></script>
+  <link rel="stylesheet" type="text/css" media="all" href="global.css"/>
  </head>
  <body>
     <!-- Display the tree (without leaf)  -->
-    <h1>Bookmark Tree</h1>
+    <h1>Bookmark D3 Tree</h1>
     <div>
      <form>
       <button type="button" id="view_table">Table</button>
-      <button type="button" name="d3Tree" id="view_d3tree">D3 Tree</button>
+      <button type="button" id="view_tree">Tree</button>
       <input type="checkbox" name="flat" value="flat" id="flat"><label for="flat"> Flat</label>
       </form>
     </div>
-    <div id="tree"></div>
+    <div id="tree" class="svg-container"></div>
  </body>
 </html>

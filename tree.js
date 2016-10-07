@@ -107,8 +107,11 @@ function getOptions() {
 
 document.addEventListener('DOMContentLoaded', function () {
   entryPoint();
-  $("#view_button").click(function() {
+  $("#view_table").click(function() {
     chrome.tabs.update( null, {"url": chrome.extension.getURL("table.html")});
+  });
+  $("#view_d3tree").click(function() {
+    chrome.tabs.update( null, {"url": chrome.extension.getURL("d3tree.html")});
   });
   $("#flat").change(function() { dumpBookmarks()});
   dumpBookmarks();
