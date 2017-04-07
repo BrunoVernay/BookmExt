@@ -1,29 +1,33 @@
 
 
 function createChart(chromeData) {
-    var w = 780,
-        h = 580,
-        index = 0,
+    var index = 0,
         chartNodes = [],
         chartLinks = [];
 
     /**
-     * Create nodes only for the links,
-     * remove the folders from the array.
-     * They will be grouped visually by color.
+     * Create nodes
      */
     function createNodesArray(data, level) {
         _.each(data, function(d, ind) {
 
             if (d.children) {
-                createNodesArray(d.children, level);
+                chartNodes.push({
+                    'index': index++,
+                    'id': d.id,
+                    'title': d.title,
+                    'parentId': d.parentId,
+                    'r': 30
+                });
+                createNodesArray(d.children, level++);
             } else {
                 chartNodes.push({
                     'index': index++,
                     'id': d.id,
                     'url': d.url,
                     'title': d.title,
-                    'parentId': d.parentId
+                    'parentId': d.parentId,
+                    'r': 20
                 });
             }
         });
@@ -39,27 +43,22 @@ function createChart(chromeData) {
      */
     function createLinksArray(data) {
         _.each(data, function(d) {
+            
+   			if (d.parentId) {
 
-            var nextData = _.reject(data,
-                function(num){ return num == d; });
-
-            _.each(nextData, function(nd){
-
-                if (d.id == nd.parentID) {
-                    cartLinks.push({
-                        'source': d.index,
-                        'target': nd.index });
-                }
-
-                if (d.parentId == nd.parentId) {
+                var parentExist = false;
+                for (var i=0 ; i < data.length && !parentExist ; i++) {
+                        parentExist = ( data[i].id == d.parentId ); 
+                };
+                if (parentExist) {
                     chartLinks.push({
-                        'source': d.index,
-                        'target': nd.index });
-                }
-            });
-
+                        'source': d.parentId,
+                        'target': d.id });
+                } else console.log("Parent "+ d.parentId +" does not exist!!");
+            }
         });
     }
+
 
     createLinksArray(chartNodes);
 
@@ -72,13 +71,13 @@ function createChart(chromeData) {
      * Initialize a default force layout,
      * using the nodes and links in dataset
      */
-    var force = d3.forceSimulation()
-         .nodes(dataset.nodes)
-         .force("link", d3.forceLink(dataset.links).distance(50))
-         .force("charge", d3.forceManyBody().strength(-120))
-         ;
-//         .size([w, h])
-//         .linkDistance([50])
+    var force = d3.forceSimulation(dataset.nodes)
+         .force("link", d3.forceLink(dataset.links).id( function(d) { return d.id;} ))
+         .force("charge", d3.forceManyBody()/*.strength(-120)*/)
+         .force("center", d3.forceCenter()) ;
+
+//    force.nodes(dataset.nodes);
+//    force.force("link").links(dataset.links);
 
     var colors = d3.scaleOrdinal(d3.schemeCategory20);
 
@@ -86,9 +85,7 @@ function createChart(chromeData) {
     var svg = d3.select("#tree")
         .append("svg")
 		.attr("preserveAspectRatio", "xMinYMin meet")
-//		.attr("viewBox", "0 0 300 300")
-        .attr("width", w)
-        .attr("height", h)
+		.attr("viewBox", "0 0 1000 1000")
 		.classed("svg-content", true);
 
     //Create links as lines
@@ -104,18 +101,25 @@ function createChart(chromeData) {
         .data(dataset.nodes)
         .enter()
         .append("circle")
-        .attr("r", 10)
+        .attr("r", function(d) { return d.r; })
         .attr("class", "node")
-        .style("fill", function(d) {
-            return colors(d.parentId);
-        })
+        .style("fill", function(d) { return colors(d.parentId); })
         .call(d3.drag());   // Really not sure about this one !!!
 
     //default browser title
-    // nodes.append("title")
-    //       .text(function(d) {
-    //         //console.log("title: "+d.title);
-    //         return d.title; });
+     nodes.append("title")
+           .text(function(d) { return d.title; });
+    
+     nodes.parent.append("text")
+         .text(function(d) { return d.title; })
+         .attr(
+                 {"text-anchor": "middle",
+                  "font-size": function(d) { return d.r / ((d.r * 10) / 100); }
+                  //,
+                  //"dy": function(d) { return d.r / ((d.r * 25) / 100); }
+                 }
+           );
+
 
     //open the url on dbclick
     //the single click drags the circles around :)
@@ -179,56 +183,6 @@ function dumpBookmarks() {
   );
 }
 
-
-function dumpTreeNodes(bookmarkNodes, nbLinksCmul, options) {
-  var list = $('<ul>');
-  var nbLinks = 0;
-  for (var i = 0; i < bookmarkNodes.length; i++) {
-    if (bookmarkNodes[i].url)  nbLinks++;
-    else {
-        var elem = dumpNode(bookmarkNodes[i], options);
-        nbLinksCmul = nbLinksCmul + elem.nbLinksCmul;
-        list.append(elem.li);
-    }
-  }
-  return {"ul":list, "nbLinks":nbLinks, "nbLinksCmul":nbLinksCmul};
-}
-
-function dumpNode(bookmarkNode, options) {
-  var nbChildren = 0;
-  var li;
-  var obj;
-  var nbLinks = 0;
-  var nbLinksCmul = 0;
-  if (bookmarkNode.children) {
-      nbChildren = bookmarkNode.children.length;
-  }
-  if (nbChildren > 0) {
-      obj = dumpTreeNodes(bookmarkNode.children, nbLinksCmul, options);
-      nbLinks = obj.nbLinks;
-      nbLinksCmul = obj.nbLinksCmul + nbLinks; 
-  }
-  var span = $('<span>');
-  if (bookmarkNode.title) {
-    if (bookmarkNode.url) {
-    } else {
-	    span.text(bookmarkNode.title + ": "+ nbLinks +" ; "+ nbLinksCmul );
-        var scale = Math.log(nbLinksCmul)/Math.log(400);
-        if (!options.flat) {
-            span.css({ "font-weight": 100*Math.floor(10*scale),
-                       "font-size": (1+scale*1.2)+"em" });
-        };
-        li = $('<li>').append(span);
-    }
-  } else {
-      li = $('<div>').append(span);
-  }
-
-  if (obj) {
-    li.append(obj.ul);
-  }
-  return {"li":li, "nbLinksCmul":nbLinksCmul};
-}
 
 function getOptions() {
     var options = {"flat": $('#flat').is(':checked')};
