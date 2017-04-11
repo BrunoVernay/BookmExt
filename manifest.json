@@ -9,7 +9,8 @@
 		"bookmarks",
         "storage",
         "tabs",
-        "http://*/"
+        "http://*/*",
+        "https://*/*"
 	],
 
 	"browser_action": {

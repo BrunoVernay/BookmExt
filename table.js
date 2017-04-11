@@ -1,51 +1,81 @@
 
+// To put in extension Option
+var TAG_EXCLUDE='Schni';
+var PREFIX_TESTED='T-';
+var PREFIX_STORED='B-';
+
+
+// Filters
+
+function isTested(item) {
+    return item.startsWith(PREFIX_TESTED);
+}
+function isStored(item) {
+    return item.startsWith(PREFIX_STORED);
+}
+
+
 function funBookmarks() {
 
-      chrome.storage.local.get('BookMrk', actOnBmk);
+      //chrome.storage.local.get('BookMrk', actOnBmk);
+      chrome.storage.local.get( null, actOnBmk);
 }
 
 function actOnBmk( bmk ) {
-    var BkmArray = bmk.BookMrk;
-    if (!BkmArray) {
-        console.log("No data in LocalStorage!");
+    var keys = Object.keys(bmk).filter(isStored);
+    var nbBookmarks = keys.length;
+    console.info("Retrieved "+ nbBookmarks + " bookmarks" );
+    if (nbBookmarks < 2) {
+        console.warn("No data in LocalStorage!");
         return;
     }
-    console.log('Bmk was: ' + JSON.stringify(BkmArray).length);
-    var xhr = new XMLHttpRequest();
-    for (var i = 0 ; i< BkmArray.length ; i++) {
-        var url = BkmArray[i].url;
-        if (url.startsWith('http://')) {
-            // Won't work due to CSP. 
-            // Will have to find a proxy/testing service Netcraft?
-          xhr.open("GET", BkmArray[i].url, true);
+    Object.values(bmk).forEach( function (bm) {
+        if (bm.tags.includes(TAG_EXCLUDE)) return;
+        var url = bm.url;
+        console.log("Try request with url: " + url);
+        if (url.startsWith('http://') || url.startsWith('https://')) {
+          var xhr = new XMLHttpRequest();
+          xhr.open("GET", url, true);
+          xhr.onreadystatechange = function() {
+             if (xhr.readyState == 2) {
+                 if ( (400 < xhr.status) && (xhr.status < 520) ) {
+                     console.warn('Status ', xhr.status, " for URL: ", url, "  Aborting!");
+                     xhr.abort();
+                 }
+             }
+             if (xhr.readyState == 4) {
+                 console.log('Status ', xhr.status, " for URL: ", url,' ; Result: ' + xhr.responseText.length);
+                 var result = {};
+                 result.id = bm.id;
+                 result.date = Date.now();
+                 result.status = xhr.status;
+                 result.text = xhr.responseText.length; // Quota exceeded
+                 var o = {};
+                 o['T-' + bm.id] = result;
+                 chrome.storage.local.set( o , function() {
+                   console.log("Saving " + JSON.stringify(o) ); });
+              }
+          }
           xhr.send();
-          var result = xhr.status();
-          console.log('Result: ' + JSON.stringify(xhr));
         }
-    }
+    });
 }
 
 
 function saveBookmarks() {
   chrome.bookmarks.getTree(
     function(bookmarkTreeNodes) {
-        var myBkm = [];
 
-        saveTreeNodes(bookmarkTreeNodes, "", myBkm);
-
-      // Save it using the Chrome extension storage API.
       chrome.storage.local.clear();
-      console.log('Bmk : ' + JSON.stringify(myBkm).length);
-      chrome.storage.local.set({'BookMrk': myBkm}, function() {
-         console.log('Bkm saved');
-      });
-      chrome.storage.local.get(['BookMrk'], function(item){
-        console.log('Bmk retrieved: ' + JSON.stringify(item).length);
+      saveTreeNodes(bookmarkTreeNodes, "");
+
+      chrome.storage.local.get(null , function(item){
+        console.info('Bkm retrieved: ' + Object.keys(item).length);
       });
     });
 }
 
-function saveTreeNodes(bookmarkNodes, tags, myBkm) {
+function saveTreeNodes(bookmarkNodes, tags) {
   for (var i = 0; i < bookmarkNodes.length; i++) {
     if (bookmarkNodes[i].url) {
         var tr = {};
@@ -54,11 +84,14 @@ function saveTreeNodes(bookmarkNodes, tags, myBkm) {
         tr.date = new Date(bookmarkNodes[i].dateAdded).toISOString().split('.')[0].replace('T',' ');
         tr.tags = tags;
         tr.url = bookmarkNodes[i].url;
-        myBkm.push(tr);
+        var o = {};
+        o['B-' + tr.id] = tr;
+        chrome.storage.local.set( o , function() {
+           console.log("Saving " + JSON.stringify(o) ); });
     } 
     else {
         var separ = tags ? ";" : "";
-        saveTreeNodes(bookmarkNodes[i].children, tags + separ + bookmarkNodes[i].title, myBkm);
+        saveTreeNodes(bookmarkNodes[i].children, tags + separ + bookmarkNodes[i].title);
     }
   }
 }
@@ -69,23 +102,52 @@ function dumpBookmarks() {
 
   chrome.bookmarks.getTree(
     function(bookmarkTreeNodes) {
-      $('#table').empty();
-      $('#table').append($('<tr>')
+      $('#table').empty();                                  // Header
+      $('#table').append($('<tr>')   
               .append($('<th>').text("Id"))
               .append($('<th>').text("Title"))
               .append($('<th>').text("Date"))
               .append($('<th>').text("Tags"))
               .append($('<th>').text("URL"))
               );
-      dumpTreeNodes(bookmarkTreeNodes, "", getOptions());
+      dumpTreeNodes(bookmarkTreeNodes, "", getOptions());   // Content
     });
+
+  chrome.storage.local.get( null, function(bkms) {          // Colors
+
+    var keys = Object.keys(bkms).filter(isTested);
+    var nbBookmarks = keys.length;
+    console.info("Retrieved "+ nbBookmarks + " tested bookmarks" );
+    if (nbBookmarks < 2) {
+        console.warn("No tested bookmarks in LocalStorage!");
+        return;
+    }
+    keys.forEach( function (key) {
+      chrome.storage.local.get( key, function (bm) {
+
+            if (Object.keys(bm).length == 0)  return;
+            var bookma = Object.values(bm)[0];
+            console.log("bkm: "+ JSON.stringify(bookma));
+            var elem = document.getElementById("tr"+bookma.id);
+            if (!elem) {
+                console.warn("Cannot find tr: " + bookma.id + ".");
+                return;
+            };
+            if (bookma.status == 200) {
+                elem.style.color = "green";
+            } else {
+                elem.style.color = "red";
+            }
+        });
+    });
+  });
 }
 
 
 function dumpTreeNodes(bookmarkNodes, tags, options) {
   for (var i = 0; i < bookmarkNodes.length; i++) {
     if (bookmarkNodes[i].url) {
-        var tr = $('<tr>');
+        var tr = $('<tr id="tr'+ bookmarkNodes[i].id  +'">');
         tr.append($('<td>').text(bookmarkNodes[i].id));
         tr.append($('<td>').text(bookmarkNodes[i].title));
         tr.append($('<td>').text(new Date(bookmarkNodes[i].dateAdded).toISOString().split('.')[0].replace('T',' ')));
@@ -97,7 +159,7 @@ function dumpTreeNodes(bookmarkNodes, tags, options) {
         var separ = tags ? ";" : "";
         dumpTreeNodes(bookmarkNodes[i].children, tags + separ + bookmarkNodes[i].title, options);
     }
-  }
+  };
 }
 
 
