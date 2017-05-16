@@ -17,10 +17,13 @@ function isStored(item) {
 
 function funBookmarks() {
 
-      //chrome.storage.local.get('BookMrk', actOnBmk);
       chrome.storage.local.get( null, actOnBmk);
 }
 
+/*
+ * Test the URL and store the HTML status code
+ * (The bookmarks must have been stored)
+ */
 function actOnBmk( bmk ) {
     var keys = Object.keys(bmk).filter(isStored);
     var nbBookmarks = keys.length;
@@ -61,7 +64,9 @@ function actOnBmk( bmk ) {
     });
 }
 
-
+/*
+ * Save in LocalStorage
+ */
 function saveBookmarks() {
   chrome.bookmarks.getTree(
     function(bookmarkTreeNodes) {
